@@ -7,7 +7,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import java.util.*;
 
 @SpringBootApplication
-public class HospitalSystem {
+public class Hashing {
     private static final Map<String, Admin> admins = new HashMap<>();
     private static final List<String> patients = new ArrayList<>();
     private static final Map<String, Integer> loginAttempts = new HashMap<>();
@@ -85,7 +85,7 @@ public class HospitalSystem {
     }
 
     public static void main(String[] args) {
-        SpringApplication.run(HospitalSystem.class, args);
+        SpringApplication.run(Hashing.class, args);
         Scanner scanner = new Scanner(System.in);
         while (true) {
             System.out.println("\nHospital Admin System");

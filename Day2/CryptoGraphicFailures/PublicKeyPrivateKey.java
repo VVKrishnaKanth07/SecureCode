@@ -8,16 +8,18 @@ import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
+import java.security.*;
 import java.util.*;
 import java.util.Base64;
 
 @SpringBootApplication
-public class Encryption {
+public class PublicKeyPrivateKey {
     private static final Map<String, Admin> admins = new HashMap<>();
     private static final Map<String, SecretKey> adminKeys = new HashMap<>();
     private static final Map<String, List<String>> patientRecords = new HashMap<>();
     private static final Map<String, Integer> loginAttempts = new HashMap<>();
     private static final int MAX_ATTEMPTS = 3;
+    private static KeyPair rsaKeyPair = generateRSAKeyPair();
 
     public static void registerAdmin(Scanner scanner) {
         System.out.print("Enter username: ");
@@ -70,7 +72,8 @@ public class Encryption {
             System.out.println("\nPatient Management System");
             System.out.println("1. Add Patient");
             System.out.println("2. View Patients");
-            System.out.println("3. Logout");
+            System.out.println("3. Encrypt Patient Data for Doctor");
+            System.out.println("4. Logout");
             System.out.print("Choose an option: ");
 
             int choice = Integer.parseInt(scanner.nextLine());
@@ -82,6 +85,9 @@ public class Encryption {
                     viewPatients(adminUsername);
                     break;
                 case 3:
+                    encryptPatientDataForDoctor(adminUsername);
+                    break;
+                case 4:
                     System.out.println("Logging out...");
                     return;
                 default:
@@ -109,51 +115,41 @@ public class Encryption {
         System.out.println("Patient data added securely.");
     }
 
-    public static void viewPatients(String adminUsername) {
-        SecretKey key = adminKeys.get(adminUsername);
-        List<String> records = patientRecords.getOrDefault(adminUsername, new ArrayList<>());
-        if (records.isEmpty()) {
-            System.out.println("No patient records found.");
-        } else {
-            System.out.println("Decrypted Patient Records:");
-            for (String record : records) {
-                System.out.println(decrypt(record, key));
+    public static void encryptPatientDataForDoctor(String adminUsername) {
+        try {
+            PublicKey publicKey = rsaKeyPair.getPublic();
+            List<String> records = patientRecords.getOrDefault(adminUsername, new ArrayList<>());
+            if (records.isEmpty()) {
+                System.out.println("No patient records found.");
+                return;
             }
+            for (String record : records) {
+                String encryptedData = encryptRSA(record, publicKey);
+                System.out.println("Encrypted Data for Doctor: " + encryptedData);
+            }
+        } catch (Exception e) {
+            System.out.println("Error encrypting data for doctor: " + e.getMessage());
         }
     }
 
-    public static SecretKey generateSecretKey() {
+    public static KeyPair generateRSAKeyPair() {
         try {
-            KeyGenerator keyGen = KeyGenerator.getInstance("AES");
-            keyGen.init(256);
-            return keyGen.generateKey();
+            KeyPairGenerator keyPairGen = KeyPairGenerator.getInstance("RSA");
+            keyPairGen.initialize(2048);
+            return keyPairGen.generateKeyPair();
         } catch (Exception e) {
-            throw new RuntimeException("Error generating encryption key", e);
+            throw new RuntimeException("Error generating RSA key pair", e);
         }
     }
 
-    public static String encrypt(String data, SecretKey key) {
-        try {
-            Cipher cipher = Cipher.getInstance("AES");
-            cipher.init(Cipher.ENCRYPT_MODE, key);
-            return Base64.getEncoder().encodeToString(cipher.doFinal(data.getBytes()));
-        } catch (Exception e) {
-            throw new RuntimeException("Encryption failed", e);
-        }
-    }
-
-    public static String decrypt(String encryptedData, SecretKey key) {
-        try {
-            Cipher cipher = Cipher.getInstance("AES");
-            cipher.init(Cipher.DECRYPT_MODE, key);
-            return new String(cipher.doFinal(Base64.getDecoder().decode(encryptedData)));
-        } catch (Exception e) {
-            throw new RuntimeException("Decryption failed", e);
-        }
+    public static String encryptRSA(String data, PublicKey publicKey) throws Exception {
+        Cipher cipher = Cipher.getInstance("RSA");
+        cipher.init(Cipher.ENCRYPT_MODE, publicKey);
+        return Base64.getEncoder().encodeToString(cipher.doFinal(data.getBytes()));
     }
 
     public static void main(String[] args) {
-        SpringApplication.run(Encryption.class, args);
+        SpringApplication.run(PublicKeyPrivateKey.class, args);
         Scanner scanner = new Scanner(System.in);
         while (true) {
             System.out.println("\nHospital Admin System");
